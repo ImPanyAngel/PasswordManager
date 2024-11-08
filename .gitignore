@@ -1,0 +1,47 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Node modules
+node_modules
+
+# Dist and build files
+dist
+dist-ssr
+*.local
+
+# Rust build artifacts
+target
+
+# Tauri build output
+src-tauri/target
+src-tauri/bundle
+
+# Tauri config backups and lock files
+*.rygel.lock
+tauri.conf.json.backup
+
+# Environment variables
+.env
+.env.* # Any environment-specific env files
+
+# Database file
+database.db
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# macOS system files
+.DS_Store
