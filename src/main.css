@@ -246,30 +246,49 @@ html {
     -ms-overflow-style: none;
 }
 
-.add-account-btn {
-    display: flex;
+.main-page-button-container {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     position: absolute;
     cursor: pointer;
-    width: 45px;
-    height: 45px;
     right: 3.5%;
     bottom: 5%;
+    gap: 15px;
+}
+
+.add-account-btn,
+.signout-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    gap: 10px;
+    height: 45px;
     border: none;
-    border-radius: 25px;
+    border-radius: 20px;
     cursor: pointer;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
     background-color: rgb(46, 46, 46);
     transition: all 0.15s ease;
+    padding: 10px 15px;
 }
 
-.add-account-btn:active {
+.add-account-btn:active,
+.signout-btn:active {
     transform: translate(2px, 2px);
 }
 
-.add-account-btn img {
-    width: 100%;
+.add-account-btn p,
+.signout-btn p {
+    color: whitesmoke;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.add-account-btn img,
+.signout-btn img {
+    width: 30px;
     height: auto;
 }
 

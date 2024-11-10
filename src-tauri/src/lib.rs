@@ -28,6 +28,37 @@ fn close_windows(app: &AppHandle) {
 }
 
 #[tauri::command]
+fn sign_out(app: AppHandle) {
+    if app.get_webview_window("start_window").is_none() {
+        if let Err(e) = WebviewWindowBuilder::new(
+            &app,
+            "start_window", // Label must match the original
+            WebviewUrl::App("index.html".into()) // Point to the original content
+        )
+        .title("Password Manager")
+        .inner_size(650.0, 450.0)
+        .resizable(false)
+        .fullscreen(false)
+        .build()
+        {
+            eprintln!("Failed to reopen start window: {}", e);
+        } else {
+            println!("Start window reopened successfully.");
+        }
+    } else {
+        println!("Start window is already open.");
+    }
+
+    if let Some(main_window) = app.get_webview_window("main_window") {
+        if let Err(e) = main_window.close() {
+            eprintln!("Failed to close main window: {}", e);
+        }
+    } else {
+        println!("Main window not found or already closed.");
+    }
+}
+
+#[tauri::command]
 fn create_app_window(app: AppHandle) {
     // Create the main window
     WebviewWindowBuilder::new(&app, "main_window", WebviewUrl::App("main.html".into()))
@@ -93,6 +124,7 @@ pub fn run() {
             create_app_window,
             is_password_open,
             copy_to_clipboard,
+            sign_out,
             data::get_password_hash,
             data::set_password_hash,
             data::insert_user_with_custom_id,

@@ -83,7 +83,7 @@ pub(crate) fn encrypt_password(
 }
 
 pub(crate) fn decrypt_password(
-    master_password: String,
+    master_password: &String,
     salt: String,
     nonce: String,
     ciphertext: String,
@@ -101,7 +101,7 @@ pub(crate) fn decrypt_password(
     let decoded_salt = str::from_utf8(&decoded_salt).map_err(|_| "Failed to convert salt to string")?;
 
     // Derive the encryption key from the master password and salt
-    let key = derive_key_from_password(master_password, decoded_salt);
+    let key = derive_key_from_password(master_password.to_string(), decoded_salt);
     let key = Key::<Aes256Gcm>::from_slice(&key);
 
     // Initialize AES-GCM with the derived key

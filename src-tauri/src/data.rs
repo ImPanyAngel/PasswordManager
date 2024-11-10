@@ -116,6 +116,72 @@ pub(crate) fn delete_password(password_id: i64) -> Result<(), String> {
     Ok(())
 }
 
+fn does_master_exist() -> Result<bool, rusqlite::Error> {
+    let db_path = get_database_path();
+    let conn = Connection::open(&db_path)?;
+
+    let exists: i32 = conn.query_row("SELECT EXISTS (SELECT 1 FROM master_password)", [], |row| row.get(0))?;
+
+    Ok(exists == 1)
+}
+
+fn change_master(new_master: &str) -> Result<(), String> {
+    let db_path = get_database_path();
+    let mut conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+    let master_password = get_password_hash().map_err(|e| e.to_string())?;
+
+    // Begin transaction for batch update
+    let transaction = conn.transaction().map_err(|e| e.to_string())?;
+
+    // Retrieve all ids and passwords in a single query
+    let mut stmt = transaction.prepare("SELECT id, password FROM passwords").map_err(|e| e.to_string())?;
+    let password_iter = stmt.query_map([], |row| {
+        let id: i32 = row.get(0)?;
+        let password: String = row.get(1)?;
+        Ok((id, password))
+    }).map_err(|e| e.to_string())?;
+
+    // Iterate over each id and password pair, split the password by '|', and re-encrypt with the new master password
+    for result in password_iter {
+        let (id, password) = result.map_err(|e| e.to_string())?;
+        let password_parts: Vec<String> = password.split('|').map(|s| s.to_string()).collect();
+
+        if password_parts.len() >= 3 {
+            let salt = &password_parts[0];
+            let nonce = &password_parts[1];
+            let ciphertext = &password_parts[2];
+
+            // Assuming `decrypt_password` returns Result<String, Error>
+            match decrypt_password(&master_password, salt.clone(), nonce.clone(), ciphertext.clone()) {
+                Ok(plaintext) => {
+                    let (new_salt, new_nonce, new_ciphertext) = encrypt_password(new_master.to_string(), plaintext);
+                    let encrypted_password = format!("{}|{}|{}", new_salt, new_nonce, new_ciphertext);
+
+                    transaction.execute(
+                        "UPDATE passwords SET password = ?1 WHERE id = ?2",
+                        params![encrypted_password, id],
+                    ).map_err(|e| e.to_string())?;
+                }
+                Err(e) => {
+                    eprintln!("Error decrypting password: {}", e);
+                }
+            }
+        } else {
+            eprintln!("Password format error: expected at least 3 parts");
+        }
+    }
+
+    // Explicitly drop `stmt` before committing the transaction
+    drop(stmt);
+
+    // Commit transaction
+    transaction.commit().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+
+
 // Getters
 #[tauri::command]
 pub(crate) fn get_password_hash() -> Result<String, String> {
@@ -194,7 +260,7 @@ pub(crate) fn get_account_passwords(account_id: String) -> Result<Vec<(i64, Stri
                     let ciphertext = parts[2].clone();
 
                     // Assuming `decrypt_password` returns Result<String, Error>
-                    match decrypt_password(master_password.clone(), salt, nonce, ciphertext) {
+                    match decrypt_password(&master_password, salt, nonce, ciphertext) {
                         Ok(plaintext) => {
                             result.push((pass_id, website, plaintext));
                         }
@@ -221,14 +287,24 @@ pub(crate) fn set_password_hash(new_hash: String) -> Result<(), String> {
     let db_path = get_database_path();
     let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
 
-    conn.execute("DELETE FROM master_password", params![])
-        .map_err(|e| e.to_string())?;
+    let result = does_master_exist().map_err(|e| e.to_string())?;
 
-    conn.execute(
-        "INSERT INTO master_password (master_hash) VALUES (?1)",
-        params![new_hash],
-    )
-    .map_err(|e| e.to_string())?;
+    if result {
+        change_master(&new_hash)?;
+        conn.execute("DELETE FROM master_password", params![]).map_err(|e| e.to_string())?;
+        conn.execute(
+            "INSERT INTO master_password (master_hash) VALUES (?1)",
+            params![new_hash],
+        )
+        .map_err(|e| e.to_string())?;
+    } else {
+        conn.execute(
+            "INSERT INTO master_password (master_hash) VALUES (?1)",
+            params![new_hash],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
 
     Ok(())
 }

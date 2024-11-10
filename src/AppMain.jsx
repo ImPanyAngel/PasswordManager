@@ -5,6 +5,7 @@ import './main.css';
 
 import addIcon from './assets/add-button.png';
 import closeIcon from './assets/close-icon.png';
+import signOutIcon from './assets/sign-out.png';
 
 function AppMain() {
     const [isPopupVisible, setIsPopupVisible] = useState(false);
@@ -32,6 +33,14 @@ function AppMain() {
         setIsPopupVisible(!isPopupVisible);
         setAccountName('');
     };
+
+    const signOut = async () => {
+        try {
+            await invoke('sign_out');
+        } catch (error) {
+            console.error("Failed to sign out:", error);
+        }
+    }
 
     const createAccount = async () => {
         try {
@@ -66,7 +75,10 @@ function AppMain() {
                 </div>
             )}
 
-            <button className="add-account-btn" onClick={togglePopup}><img className="btn-add-img" src={addIcon} alt="add"/></button>
+            <div className='main-page-button-container'>
+                <button className="signout-btn" onClick={signOut}><p>Sign Out</p><img src={signOutIcon} alt="add"/></button>
+                <button className="add-account-btn" onClick={togglePopup}><p>Add Account</p><img src={addIcon} alt="add"/></button>
+            </div>
         </div>
     );
 }
